@@ -417,6 +417,7 @@ type Light struct {
 	NumCaches      int // Maximum number of caches to keep before eviction (only init, don't modify)
 	ecip1099FBlock *uint64
 	uip1Epoch      *uint64
+	cacheDir string
 }
 
 // Verify checks whether the block's nonce is valid.
@@ -529,7 +530,7 @@ func (l *Light) getCache(blockNum uint64) *cache {
 	l.mu.Unlock()
 
 	// Wait for generation finish and return the cache
-	c.generate(defaultDir(), cachesOnDisk, cachesLockMmap, l.test)
+	c.generate(l.cacheDir + ".etchash", cachesOnDisk, cachesLockMmap, l.test)
 	return c
 }
 
@@ -745,10 +746,11 @@ type Etchash struct {
 }
 
 // New creates an instance of the proof of work.
-func New(ecip1099FBlock *uint64, uip1FEpoch *uint64) *Etchash {
+func New(ecip1099FBlock *uint64, uip1FEpoch *uint64, cacheDir string) *Etchash {
 	var light = new(Light)
 	light.ecip1099FBlock = ecip1099FBlock
 	light.uip1Epoch = uip1FEpoch
+	light.cacheDir = cacheDir
 	return &Etchash{light, &Full{turbo: true, ecip1099FBlock: ecip1099FBlock, uip1Epoch: uip1FEpoch}}
 }
 
