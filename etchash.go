@@ -523,14 +523,14 @@ func (l *Light) getCache(blockNum uint64) *cache {
 		if l.future == nil || l.future.epoch <= epoch {
 			log.Debug(fmt.Sprintf("Pre-generating DAG for epoch %d", nextEpoch))
 			l.future = &cache{epoch: nextEpoch, epochLength: nextEpochLength}
-			go l.future.generate(defaultDir(), cachesOnDisk, cachesLockMmap, l.test)
+			go l.future.generate(l.cacheDir, cachesOnDisk, cachesLockMmap, l.test)
 		}
 	}
 	c.used = time.Now()
 	l.mu.Unlock()
 
 	// Wait for generation finish and return the cache
-	c.generate(l.cacheDir + ".etchash", cachesOnDisk, cachesLockMmap, l.test)
+	c.generate(l.cacheDir, cachesOnDisk, cachesLockMmap, l.test)
 	return c
 }
 
