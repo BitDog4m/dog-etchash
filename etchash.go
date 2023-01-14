@@ -27,7 +27,6 @@ import (
 	"math/big"
 	"math/rand"
 	"os"
-	"os/user"
 	"path/filepath"
 	"reflect"
 	"runtime"
@@ -69,18 +68,18 @@ const (
 	datasetsLockMmap           = false
 )
 
-var DefaultDir = defaultDir()
-
-func defaultDir() string {
-	home := os.Getenv("HOME")
-	if user, err := user.Current(); err == nil {
-		home = user.HomeDir
-	}
-	if runtime.GOOS == "windows" {
-		return filepath.Join(home, "AppData", "Etchash")
-	}
-	return filepath.Join(home, ".etchash")
-}
+//var DefaultDir = defaultDir()
+//
+//func defaultDir() string {
+//	home := os.Getenv("HOME")
+//	if user, err := user.Current(); err == nil {
+//		home = user.HomeDir
+//	}
+//	if runtime.GOOS == "windows" {
+//		return filepath.Join(home, "AppData", "Etchash")
+//	}
+//	return filepath.Join(home, ".etchash")
+//}
 
 // isLittleEndian returns whether the local system is running in little or big
 // endian byte order.
@@ -663,71 +662,71 @@ type Full struct {
 	uip1Epoch      *uint64
 }
 
-func (pow *Full) getDAG(blockNum uint64) (d *dataset) {
-	epochLength := calcEpochLength(blockNum, pow.ecip1099FBlock)
-	epoch := calcEpoch(blockNum, epochLength)
-	pow.mu.Lock()
-	if pow.current != nil && pow.current.epoch == epoch {
-		d = pow.current
-	} else {
-		d = &dataset{epoch: epoch, epochLength: uint64(epochLength)}
-		pow.current = d
-	}
-	pow.mu.Unlock()
-	// wait for it to finish generating.
-	d.generate(defaultDir(), datasetsOnDisk, datasetsLockMmap, pow.test)
-	return d
-}
+//func (pow *Full) getDAG(blockNum uint64) (d *dataset) {
+//	epochLength := calcEpochLength(blockNum, pow.ecip1099FBlock)
+//	epoch := calcEpoch(blockNum, epochLength)
+//	pow.mu.Lock()
+//	if pow.current != nil && pow.current.epoch == epoch {
+//		d = pow.current
+//	} else {
+//		d = &dataset{epoch: epoch, epochLength: uint64(epochLength)}
+//		pow.current = d
+//	}
+//	pow.mu.Unlock()
+//	// wait for it to finish generating.
+//	d.generate(defaultDir(), datasetsOnDisk, datasetsLockMmap, pow.test)
+//	return d
+//}
 
-func (pow *Full) Search(block Block, stop <-chan struct{}, index int) (nonce uint64, mixDigest []byte) {
-	dag := pow.getDAG(block.NumberU64())
-
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	diff := block.Difficulty()
-
-	i := int64(0)
-	starti := i
-	start := time.Now().UnixNano()
-	previousHashrate := int32(0)
-
-	nonce = uint64(r.Int63())
-	hash := block.HashNoNonce()
-	target := new(big.Int).Div(maxUint256, diff)
-	for {
-		select {
-		case <-stop:
-			atomic.AddInt32(&pow.hashRate, -previousHashrate)
-			return 0, nil
-		default:
-			i++
-
-			// we don't have to update hash rate on every nonce, so update after
-			// first nonce check and then after 2^X nonces
-			if i == 2 || ((i % (1 << 16)) == 0) {
-				elapsed := time.Now().UnixNano() - start
-				hashes := (float64(1e9) / float64(elapsed)) * float64(i-starti)
-				hashrateDiff := int32(hashes) - previousHashrate
-				previousHashrate = int32(hashes)
-				atomic.AddInt32(&pow.hashRate, hashrateDiff)
-			}
-
-			digest, result := hashimotoFull(dag.dataset, hash.Bytes(), nonce)
-			// result := h256ToHash(ret.result).Big()
-			bigres := common.BytesToHash(result).Big()
-			// TODO: disagrees with the spec https://github.com/ethereum/wiki/wiki/Etchash#mining
-			if digest != nil && bigres.Cmp(target) <= 0 {
-				mixDigest = digest
-				atomic.AddInt32(&pow.hashRate, -previousHashrate)
-				return nonce, mixDigest
-			}
-			nonce += 1
-		}
-
-		if !pow.turbo {
-			time.Sleep(20 * time.Microsecond)
-		}
-	}
-}
+//func (pow *Full) Search(block Block, stop <-chan struct{}, index int) (nonce uint64, mixDigest []byte) {
+//	dag := pow.getDAG(block.NumberU64())
+//
+//	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+//	diff := block.Difficulty()
+//
+//	i := int64(0)
+//	starti := i
+//	start := time.Now().UnixNano()
+//	previousHashrate := int32(0)
+//
+//	nonce = uint64(r.Int63())
+//	hash := block.HashNoNonce()
+//	target := new(big.Int).Div(maxUint256, diff)
+//	for {
+//		select {
+//		case <-stop:
+//			atomic.AddInt32(&pow.hashRate, -previousHashrate)
+//			return 0, nil
+//		default:
+//			i++
+//
+//			// we don't have to update hash rate on every nonce, so update after
+//			// first nonce check and then after 2^X nonces
+//			if i == 2 || ((i % (1 << 16)) == 0) {
+//				elapsed := time.Now().UnixNano() - start
+//				hashes := (float64(1e9) / float64(elapsed)) * float64(i-starti)
+//				hashrateDiff := int32(hashes) - previousHashrate
+//				previousHashrate = int32(hashes)
+//				atomic.AddInt32(&pow.hashRate, hashrateDiff)
+//			}
+//
+//			digest, result := hashimotoFull(dag.dataset, hash.Bytes(), nonce)
+//			// result := h256ToHash(ret.result).Big()
+//			bigres := common.BytesToHash(result).Big()
+//			// TODO: disagrees with the spec https://github.com/ethereum/wiki/wiki/Etchash#mining
+//			if digest != nil && bigres.Cmp(target) <= 0 {
+//				mixDigest = digest
+//				atomic.AddInt32(&pow.hashRate, -previousHashrate)
+//				return nonce, mixDigest
+//			}
+//			nonce += 1
+//		}
+//
+//		if !pow.turbo {
+//			time.Sleep(20 * time.Microsecond)
+//		}
+//	}
+//}
 
 func (pow *Full) GetHashrate() int64 {
 	return int64(atomic.LoadInt32(&pow.hashRate))
